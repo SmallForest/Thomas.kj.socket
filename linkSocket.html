@@ -1,0 +1,317 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="aplus-terminal" content="1">
+    <meta name="apple-mobile-web-app-title" content="">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <meta name="format-detection" content="telephone=no, address=no">
+    <title></title>
+    <style type="text/css">
+        /*公共样式*/
+        body, h1, h2, h3, h4, p, ul, ol, li, form, button, input, textarea, th, td {
+            margin: 0;
+            padding: 0
+        }
+
+        body, button, input, select, textarea {
+            font: 12px/1.5 Microsoft YaHei UI Light, tahoma, arial, "\5b8b\4f53";
+            *line-height: 1.5;
+            -ms-overflow-style: scrollbar
+        }
+
+        h1, h2, h3, h4 {
+            font-size: 100%
+        }
+
+        ul, ol {
+            list-style: none
+        }
+
+        a {
+            text-decoration: none
+        }
+
+        a:hover {
+            text-decoration: underline
+        }
+
+        img {
+            border: 0
+        }
+
+        button, input, select, textarea {
+            font-size: 100%
+        }
+
+        table {
+            border-collapse: collapse;
+            border-spacing: 0
+        }
+
+        /*rem*/
+        html {
+            font-size: 62.5%;
+        }
+
+        body {
+            font: 16px/1.5 "microsoft yahei", 'tahoma';
+        }
+
+        body .mobile-page {
+            font-size: 1.6rem;
+        }
+
+        /*浮动*/
+        .fl {
+            float: left;
+        }
+
+        .fr {
+            float: right;
+        }
+
+        .clearfix:after {
+            content: '';
+            display: block;
+            height: 0;
+            clear: both;
+            visibility: hidden;
+        }
+
+        body {
+            background-color: #F5F5F5;
+        }
+
+        .mobile-page {
+            /*max-width: 600px;*/
+        }
+
+        .mobile-page .admin-img, .mobile-page .user-img {
+            width: 45px;
+            height: 45px;
+        }
+
+        i.triangle-admin, i.triangle-user {
+            width: 0;
+            height: 0;
+            position: absolute;
+            top: 10px;
+            display: inline-block;
+            border-top: 10px solid transparent;
+            border-bottom: 10px solid transparent;
+        }
+
+        .mobile-page i.triangle-admin {
+            left: 4px;
+            border-right: 12px solid #fff;
+        }
+
+        .mobile-page i.triangle-user {
+            right: 4px;
+            border-left: 12px solid #9EEA6A;
+        }
+
+        .mobile-page .admin-group, .mobile-page .user-group {
+            padding: 6px;
+            display: flex;
+            display: -webkit-flex;
+        }
+
+        .mobile-page .admin-group {
+            justify-content: flex-start;
+            -webkit-justify-content: flex-start;
+        }
+
+        .mobile-page .user-group {
+            justify-content: flex-end;
+            -webkit-justify-content: flex-end;
+        }
+
+        .mobile-page .admin-reply, .mobile-page .user-reply {
+            display: inline-block;
+            padding: 8px;
+            border-radius: 4px;
+            background-color: #fff;
+            margin: 0 15px 12px;
+        }
+
+        .mobile-page .admin-reply {
+            box-shadow: 0px 0px 2px #ddd;
+        }
+
+        .mobile-page .user-reply {
+            text-align: left;
+            background-color: #9EEA6A;
+            box-shadow: 0px 0px 2px #bbb;
+        }
+
+        .mobile-page .user-msg, .mobile-page .admin-msg {
+            width: 75%;
+            position: relative;
+        }
+
+        .mobile-page .user-msg {
+            text-align: right;
+        }
+
+        .input {
+            position: fixed;
+            bottom: 0px;
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            align-items: center;
+        }
+
+        .input textarea {
+            width: 90%;
+        }
+
+        .input div {
+            width: 10%;
+        }
+    </style>
+</head>
+<body>
+<div class="mobile-page" id="app">
+    <div v-for="item in list">
+        <div class="user-group" v-if="fd==item.my_info.fd">
+            <div class="user-msg">
+                <span class="user-reply">{{item.message}}</span>
+                <i class="triangle-user"></i>
+            </div>
+            <img class="user-img" :src="item.my_info.avatar"/>
+        </div>
+        <div class="admin-group" v-else>
+            <img class="admin-img" :src="item.my_info.avatar"/>
+            <div class="admin-msg">
+                <i class="triangle-admin"></i>
+                <span class="admin-reply">{{item.message}}</span>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+<!--静态页面来源 https://blog.csdn.net/qq_33988065/article/details/53856694-->
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            fd: 0,
+            list: [],
+            message: '',
+            is_conn: false,
+            wsObj: null,
+            inputMessage: '',
+            title: ''
+        },
+        mounted() {
+            this.wsObj = this.socket();
+        }, methods: {
+            isJSON(str) {
+                if (typeof str == 'string') {
+                    try {
+                        var obj = JSON.parse(str);
+                        if (typeof obj == 'object' && obj) {
+                            return true;
+                        } else {
+                            return false;
+                        }
+
+                    } catch (e) {
+                        console.log('error：' + str + '!!!' + e);
+                        return false;
+                    }
+                }
+                return false;
+            },
+            /**
+             * 发送消息
+             * @param to_fd 接收人的fd
+             * @param message 发送的消息内容
+             * @param nickname 发送人昵称
+             * @param avatar 发送人头像
+             */
+            sendMsg(to_fd, message, nickname, avatar) {
+                if (message === '') {
+                    alert("消息不能为空格");
+                    return;
+                }
+                var str_to_self = {
+                    fd: this.fd,
+                    message: message,
+                    my_info: {
+                        nickname: nickname,
+                        avatar: avatar,
+                        fd: this.fd,
+                    }
+                };
+                this.list.push(str_to_self);
+                //消息发给远端
+                var str = {
+                    fd: to_fd,
+                    message: message,
+                    my_info: {
+                        nickname: nickname,
+                        avatar: avatar,
+                        fd: this.fd,
+                    }
+                };
+                this.wsObj.send(JSON.stringify(str));
+            },
+            socket() {
+                let that = this;
+                if ("WebSocket" in window) {
+                    window.console.log("您的浏览器支持 WebSocket!");
+
+                    // 打开一个 web socket
+                    var ws = new WebSocket("ws://127.0.0.1:9501");
+
+                    ws.onopen = function () {
+                        // Web Socket 已连接上，使用 send() 方法发送数据
+                        that.message = '连接服务器成功'
+                        that.is_conn = true;
+                    };
+
+                    ws.onmessage = function (evt) {
+                        var received_msg = evt.data;
+                        var json = that.isJSON(received_msg);
+                        if (json) {
+                            let o = JSON.parse(received_msg);
+                            document.title = o.my_info.nickname;
+                            that.list.push(o);
+                        } else {
+                            that.fd = parseInt(received_msg);
+                        }
+
+                        window.console.log(received_msg);
+                    };
+
+                    ws.onclose = function () {
+                        // 关闭 websocket
+                        that.message = '与服务器断开连接请重试访问';
+                        that.is_conn = false;
+                        window.console.log("连接已关闭...");
+                    };
+                    return ws;
+                } else {
+                    // 浏览器不支持 WebSocket
+                    window.console.log("您的浏览器不支持 WebSocket!");
+                }
+            },
+        }
+    })
+    //使用样例 主要是调用方法sendMsg
+    //http://cdn.duitang.com/uploads/item/201610/03/20161003000301_Wfm5X.jpeg
+    //四个参数中后两个是为了对方展示使用的
+    setTimeout(() => {
+        app.sendMsg(2, "你好", "中华小当家", "http://cdn.duitang.com/uploads/item/201610/03/20161003000301_Wfm5X.jpeg")
+    }, 1000)
+
+
+</script>
